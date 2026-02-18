@@ -84,16 +84,24 @@
             width: 100%;
             max-width: 300px;
             margin: 20px auto;
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
         
-        .ad-button:hover {
+        .ad-button:hover:not(:disabled) {
             transform: translateY(-3px);
             box-shadow: 0 15px 30px rgba(102, 126, 234, 0.5);
         }
         
-        .ad-button:active {
+        .ad-button:active:not(:disabled) {
             transform: translateY(0);
+        }
+        
+        .ad-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
         }
         
         .stats {
@@ -123,12 +131,6 @@
             color: #666;
         }
         
-        .ad-container {
-            margin-top: 20px;
-            min-height: 50px;
-            width: 100%;
-        }
-        
         .toast {
             position: fixed;
             bottom: 30px;
@@ -149,15 +151,14 @@
             opacity: 1;
         }
         
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
             border: 3px solid rgba(255,255,255,.3);
             border-radius: 50%;
             border-top-color: #fff;
             animation: spin 1s ease-in-out infinite;
-            margin-right: 10px;
+            display: inline-block;
         }
         
         @keyframes spin {
@@ -165,7 +166,13 @@
         }
         
         .hidden {
-            display: none;
+            display: none !important;
+        }
+        
+        .cooldown-timer {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -192,14 +199,14 @@
             </div>
             
             <button class="ad-button" id="showAdBtn">
-                <span class="loading hidden" id="btnLoading"></span>
+                <span class="loading-spinner hidden" id="btnLoading"></span>
                 <span id="btnText">Watch Ad & Earn</span>
             </button>
             
-            <p style="color: #666; font-size: 12px; margin-top: 10px;">Click button to watch ad and earn rewards</p>
+            <div id="cooldownMessage" class="cooldown-timer"></div>
             
-            <!-- Monetag Ad Container -->
-            <div id="monetag-ads" class="ad-container"></div>
+            <!-- Monetag Ad Container (hidden but necessary) -->
+            <div id="monetag-ads" style="display: none;"></div>
         </div>
     </div>
     
@@ -212,8 +219,8 @@
         // Telegram Web App initialization
         const tg = window.Telegram ? Telegram.WebApp : null;
         if (tg) {
-            tg.expand(); // Expand to full height
-            tg.ready(); // Notify Telegram that app is ready
+            tg.expand();
+            tg.ready();
         }
         
         // App State
@@ -223,6 +230,8 @@
             todayEarn: 0.00,
             lastAdTime: null
         };
+        
+        let cooldownInterval = null;
         
         // Load saved data
         function loadData() {
@@ -244,6 +253,7 @@
                 }
             }
             updateUI();
+            startCooldownTimer(); // Start timer if in cooldown
         }
         
         // Save data
@@ -271,17 +281,19 @@
             }, 3000);
         }
         
-        // Show loading state
-        function setLoading(isLoading) {
+        // Show loading state only during ad display
+        function setAdLoading(isLoading) {
             const btn = document.getElementById('showAdBtn');
             const loading = document.getElementById('btnLoading');
             const btnText = document.getElementById('btnText');
             
             if (isLoading) {
+                // Show loading only when ad is being shown
                 loading.classList.remove('hidden');
-                btnText.textContent = ' Loading...';
+                btnText.textContent = ' Showing Ad...';
                 btn.disabled = true;
             } else {
+                // Hide loading when ad is done
                 loading.classList.add('hidden');
                 btnText.textContent = 'Watch Ad & Earn';
                 btn.disabled = false;
@@ -299,7 +311,7 @@
             return timeDiff > cooldownMinutes * 60 * 1000;
         }
         
-        // Get time until next ad
+        // Get time until next ad in seconds
         function getTimeUntilNextAd() {
             if (!state.lastAdTime) return 0;
             
@@ -311,39 +323,88 @@
             return Math.ceil((cooldownMs - timeDiff) / 1000);
         }
         
+        // Start cooldown timer
+        function startCooldownTimer() {
+            if (cooldownInterval) {
+                clearInterval(cooldownInterval);
+            }
+            
+            cooldownInterval = setInterval(() => {
+                const secondsLeft = getTimeUntilNextAd();
+                const cooldownMsg = document.getElementById('cooldownMessage');
+                const adBtn = document.getElementById('showAdBtn');
+                
+                if (secondsLeft > 0) {
+                    cooldownMsg.textContent = `Next ad available in ${secondsLeft}s`;
+                    adBtn.disabled = true;
+                    adBtn.style.opacity = '0.5';
+                } else {
+                    cooldownMsg.textContent = '';
+                    if (!adBtn.classList.contains('ad-loading')) {
+                        adBtn.disabled = false;
+                        adBtn.style.opacity = '1';
+                    }
+                }
+            }, 1000);
+        }
+        
         // Show Monetag Ad
         function showMonetagAd() {
             return new Promise((resolve, reject) => {
                 try {
-                    // Check if Monetag SDK is loaded
-                    if (typeof window.show_10613926 !== 'undefined') {
-                        // Call Monetag ad
+                    console.log('Attempting to show Monetag ad...');
+                    
+                    // Try to find Monetag function
+                    if (typeof window.show_10613926 === 'function') {
+                        console.log('Monetag SDK found, showing ad...');
+                        
+                        // Show loading state only when ad starts
+                        setAdLoading(true);
+                        
+                        // Call Monetag ad with proper callbacks
                         window.show_10613926({
                             onDisplay: function() {
-                                console.log('Ad displayed');
+                                console.log('Ad displayed successfully');
+                                // Keep loading state while ad is showing
                             },
                             onClose: function() {
-                                console.log('Ad closed');
+                                console.log('Ad closed by user');
+                                // Hide loading when ad closes
+                                setAdLoading(false);
                                 resolve(true);
+                            },
+                            onComplete: function() {
+                                console.log('Ad completed');
+                                // Ad completed successfully
                             },
                             onError: function(error) {
                                 console.error('Ad error:', error);
+                                setAdLoading(false);
                                 reject(error);
                             }
                         });
                     } else {
-                        // If SDK not ready, try to find the ad container
+                        console.warn('Monetag SDK not ready, checking for alternative...');
+                        
+                        // Alternative: Try to find ad container method
                         const adContainer = document.getElementById('monetag-ads');
                         if (adContainer) {
-                            // Simulate ad display (replace with actual Monetag implementation)
-                            console.log('Showing ad in container');
-                            resolve(true);
+                            // Show loading
+                            setAdLoading(true);
+                            
+                            // Simulate ad for testing (remove in production)
+                            setTimeout(() => {
+                                console.log('Simulated ad completed');
+                                setAdLoading(false);
+                                resolve(true);
+                            }, 3000);
                         } else {
-                            reject(new Error('Ad SDK not loaded'));
+                            reject(new Error('Ad SDK not available'));
                         }
                     }
                 } catch (error) {
-                    console.error('Error showing ad:', error);
+                    console.error('Error in showMonetagAd:', error);
+                    setAdLoading(false);
                     reject(error);
                 }
             });
@@ -351,17 +412,15 @@
         
         // Handle ad click
         async function handleAdClick() {
-            // Check cooldown
+            // Check cooldown first
             if (!canShowAd()) {
                 const secondsLeft = getTimeUntilNextAd();
-                showToast(`Please wait ${secondsLeft} seconds for next ad`, false);
+                showToast(`⏳ Please wait ${secondsLeft} seconds`, false);
                 return;
             }
             
-            setLoading(true);
-            
             try {
-                // Show ad
+                // Show ad - loading state is managed inside showMonetagAd function
                 const adShown = await showMonetagAd();
                 
                 if (adShown) {
@@ -380,6 +439,9 @@
                     // Show success message
                     showToast(`🎉 Earned $${earning.toFixed(2)}!`);
                     
+                    // Update cooldown timer
+                    startCooldownTimer();
+                    
                     // Optional: Send data to Telegram
                     if (tg) {
                         tg.sendData(JSON.stringify({
@@ -390,10 +452,9 @@
                     }
                 }
             } catch (error) {
-                console.error('Ad error:', error);
-                showToast('Failed to load ad. Try again!', false);
-            } finally {
-                setLoading(false);
+                console.error('Ad failed:', error);
+                showToast('❌ Failed to load ad. Try again!', false);
+                setAdLoading(false); // Ensure loading is hidden on error
             }
         }
         
@@ -407,16 +468,15 @@
             // Set today's date
             localStorage.setItem('lastDate', new Date().toDateString());
             
-            // Check for Monetag SDK loading
-            console.log('Monetag SDK initialized for zone: 10613926');
+            console.log('App initialized, Monetag zone: 10613926');
         });
         
-        // Handle Telegram back button if needed
-        if (tg) {
-            tg.BackButton.onClick(() => {
-                tg.close();
-            });
-        }
+        // Clean up interval on page unload
+        window.addEventListener('beforeunload', () => {
+            if (cooldownInterval) {
+                clearInterval(cooldownInterval);
+            }
+        });
     </script>
 </body>
 </html>
