@@ -11,8 +11,8 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- LibTL Ad SDK -->
-<script src='//libtl.com/sdk.js' data-zone='10613926' data-sdk='show_10613926'></script>
+    <!-- LibTL Ad SDK with your zone ID -->
+    <script src='//libtl.com/sdk.js' data-zone='10613926' data-sdk='show_10613926'></script>
     
     <style>
         body {
@@ -43,6 +43,18 @@
         .btn-dynamic-popup {
             animation: pulseGlow 2s infinite;
             animation-delay: 0.5s;
+        }
+        /* Ad container styling */
+        .ad-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            max-width: 90%;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         }
     </style>
 </head>
@@ -101,7 +113,7 @@
         </div>
     </div>
     
-    <!-- Updated Modal -->
+    <!-- Limit Reached Modal -->
     <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
         <div class="bg-white dark:bg-gray-900 rounded-3xl p-8 max-w-sm w-full shadow-2xl transform scale-95 transition-all duration-300">
             <h2 class="text-3xl font-bold mb-5 text-red-600 text-center">Limit Reached!</h2>
@@ -117,10 +129,14 @@
         </div>
     </div>
     
+    <!-- Ad Container for better ad display -->
+    <div id="adContainer" class="ad-container hidden"></div>
+    
     <script>
         let adsCount = 0;
         const maxAds = 60;
         const fullCircumference = 603;
+        let isAdShowing = false;
         
         const user = Telegram.WebApp.initDataUnsafe.user;
         const displayName = user?.username ? `@${user.username}` : (user?.first_name || 'Friend');
@@ -175,40 +191,93 @@
         // Manual reset function
         function resetCounter() {
             adsCount = 0;
-            localStorage.setItem('adsCount', '0'); // Reset count for today
+            localStorage.setItem('adsCount', '0');
             updateUI();
             document.getElementById('modal').classList.add('hidden');
         }
         
-        // Common ad show function
-        function showAd(type = '') {
+        // Function to check if SDK is loaded
+        function isSDKLoaded() {
+            return typeof show_10613926 === 'function';
+        }
+        
+        // Function to show interstitial ad using your SDK
+        function showInterstitialAd() {
             if (adsCount >= maxAds) {
                 document.getElementById('modal').classList.remove('hidden');
                 return;
             }
             
-            if (typeof show_10613926 !== 'function') {
-                alert('Ad SDK loading... Try again in a few seconds.');
+            if (!isSDKLoaded()) {
+                alert('Ad SDK is loading... Please try again in a moment.');
                 return;
             }
             
+            if (isAdShowing) {
+                alert('An ad is already showing. Please wait...');
+                return;
+            }
+            
+            isAdShowing = true;
             Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
             
-            const adPromise = type === 'pop' ? show_10613926('pop') : show_10613926();
-            
-            adPromise
+            // Show interstitial ad using your SDK
+            show_10613926()
                 .then(() => {
+                    // Ad watched successfully
                     incrementCount();
                     Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                    isAdShowing = false;
                 })
-                .catch((err) => {
-                    console.log('Ad error/closed:', err);
-                    Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+                .catch((error) => {
+                    console.log('Ad error or closed:', error);
+                    // Still increment if user watched the ad
+                    if (error !== 'close') {
+                        Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+                    }
+                    isAdShowing = false;
                 });
         }
         
-        document.getElementById('watchInterstitialBtn').onclick = () => showAd('');
-        document.getElementById('watchPopupBtn').onclick = () => showAd('pop');
+        // Function to show popup ad using your SDK
+        function showPopupAd() {
+            if (adsCount >= maxAds) {
+                document.getElementById('modal').classList.remove('hidden');
+                return;
+            }
+            
+            if (!isSDKLoaded()) {
+                alert('Ad SDK is loading... Please try again in a moment.');
+                return;
+            }
+            
+            if (isAdShowing) {
+                alert('An ad is already showing. Please wait...');
+                return;
+            }
+            
+            isAdShowing = true;
+            Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+            
+            // Show popup ad using your SDK (with 'pop' parameter for popup ads)
+            show_10613939('pop')
+                .then(() => {
+                    // Ad watched successfully
+                    incrementCount();
+                    Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                    isAdShowing = false;
+                })
+                .catch((error) => {
+                    console.log('Popup ad error or closed:', error);
+                    if (error !== 'close') {
+                        Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+                    }
+                    isAdShowing = false;
+                });
+        }
+        
+        document.getElementById('watchInterstitialBtn').onclick = showInterstitialAd;
+        document.getElementById('watchPopupBtn').onclick = showPopupAd;
         document.getElementById('resetBtn').onclick = resetCounter;
         
         window.onload = () => {
@@ -219,6 +288,15 @@
                     el.classList.add('opacity-100', 'translate-y-0', 'scale-100');
                 }, 100 + i * 150);
             });
+            
+            // Check if SDK is loaded
+            setTimeout(() => {
+                if (isSDKLoaded()) {
+                    console.log('Ad SDK loaded successfully');
+                } else {
+                    console.log('Waiting for Ad SDK to load...');
+                }
+            }, 2000);
         };
     </script>
 </body>
