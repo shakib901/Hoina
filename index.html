@@ -1,482 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Mini App with Ads</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 400px;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 28px;
-            font-weight: 600;
-        }
-        
-        .content {
-            text-align: center;
-        }
-        
-        .balance-card {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-            color: white;
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
-        
-        .balance-card h3 {
-            font-size: 16px;
-            opacity: 0.9;
-            margin-bottom: 10px;
-        }
-        
-        .balance-card .amount {
-            font-size: 48px;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-        
-        .balance-card .label {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
-        .ad-button {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 20px 40px;
-            border-radius: 50px;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
-            border: 2px solid rgba(255,255,255,0.2);
-            width: 100%;
-            max-width: 300px;
-            margin: 20px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        
-        .ad-button:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.5);
-        }
-        
-        .ad-button:active:not(:disabled) {
-            transform: translateY(0);
-        }
-        
-        .ad-button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-        
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            margin: 30px 0;
-            gap: 15px;
-        }
-        
-        .stat-item {
-            flex: 1;
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 5px;
-        }
-        
-        .stat-label {
-            font-size: 12px;
-            color: #666;
-        }
-        
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: #333;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-size: 14px;
-            opacity: 0;
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-        
-        .toast.show {
-            transform: translateX(-50%) translateY(0);
-            opacity: 1;
-        }
-        
-        .loading-spinner {
-            width: 24px;
-            height: 24px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-            display: inline-block;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-        
-        .cooldown-timer {
-            font-size: 14px;
-            color: #666;
-            margin-top: 10px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telegram Ad Reward App</title>
+
+<!-- Monetag SDK -->
+<script src='//libtl.com/sdk.js' data-zone='10613926' data-sdk='show_10613926'></script>
+
+<style>
+body{
+    margin:0;
+    padding:0;
+    background:#0f172a;
+    font-family:Arial, sans-serif;
+    text-align:center;
+    color:white;
+}
+
+.container{
+    padding-top:80px;
+}
+
+h1{
+    font-size:22px;
+}
+
+.counter{
+    font-size:28px;
+    margin:20px 0;
+    color:#22c55e;
+}
+
+button{
+    padding:12px 25px;
+    font-size:18px;
+    border:none;
+    border-radius:8px;
+    background:#2563eb;
+    color:white;
+    cursor:pointer;
+}
+
+button:disabled{
+    background:gray;
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>💰 AdEarn Mini App</h1>
-        
-        <div class="content">
-            <div class="balance-card">
-                <h3>Your Balance</h3>
-                <div class="amount" id="balance">$0.00</div>
-                <div class="label">Total Earnings</div>
-            </div>
-            
-            <div class="stats">
-                <div class="stat-item">
-                    <div class="stat-value" id="adCount">0</div>
-                    <div class="stat-label">Ads Watched</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="todayEarn">$0.00</div>
-                    <div class="stat-label">Today's Earn</div>
-                </div>
-            </div>
-            
-            <button class="ad-button" id="showAdBtn">
-                <span class="loading-spinner hidden" id="btnLoading"></span>
-                <span id="btnText">Watch Ad & Earn</span>
-            </button>
-            
-            <div id="cooldownMessage" class="cooldown-timer"></div>
-            
-            <!-- Monetag Ad Container (hidden but necessary) -->
-            <div id="monetag-ads" style="display: none;"></div>
-        </div>
+
+<div class="container">
+    <h1>Watch Ads & Earn</h1>
+    <div class="counter">
+        Ads Watched: <span id="count">0</span> / 60
     </div>
-    
-    <div class="toast" id="toast">Message</div>
-    
-    <!-- Your Monetag SDK -->
-    <script src='//libtl.com/sdk.js' data-zone='10613926' data-sdk='show_10613926'></script>
-    
-    <script>
-        // Telegram Web App initialization
-        const tg = window.Telegram ? Telegram.WebApp : null;
-        if (tg) {
-            tg.expand();
-            tg.ready();
+    <button onclick="showAd()">Watch Ad</button>
+</div>
+
+<script>
+let maxAds = 60;
+let adCount = localStorage.getItem("adCount") 
+    ? parseInt(localStorage.getItem("adCount")) 
+    : 0;
+
+document.getElementById("count").innerText = adCount;
+
+function showAd(){
+    if(adCount >= maxAds){
+        alert("Daily Limit Reached! Counter Resetting...");
+        adCount = 0;
+        localStorage.setItem("adCount", adCount);
+        document.getElementById("count").innerText = adCount;
+        return;
+    }
+
+    show_10613926().then(() => {
+        adCount++;
+        localStorage.setItem("adCount", adCount);
+        document.getElementById("count").innerText = adCount;
+
+        if(adCount >= maxAds){
+            alert("You have watched 60 ads. Counter will reset.");
         }
-        
-        // App State
-        let state = {
-            balance: 0.00,
-            adCount: 0,
-            todayEarn: 0.00,
-            lastAdTime: null
-        };
-        
-        let cooldownInterval = null;
-        
-        // Load saved data
-        function loadData() {
-            const saved = localStorage.getItem('adEarnData');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    state = { ...state, ...parsed };
-                    
-                    // Reset today's earnings if new day
-                    const lastDate = localStorage.getItem('lastDate');
-                    const today = new Date().toDateString();
-                    if (lastDate !== today) {
-                        state.todayEarn = 0;
-                        localStorage.setItem('lastDate', today);
-                    }
-                } catch (e) {
-                    console.error('Error loading data:', e);
-                }
-            }
-            updateUI();
-            startCooldownTimer(); // Start timer if in cooldown
-        }
-        
-        // Save data
-        function saveData() {
-            localStorage.setItem('adEarnData', JSON.stringify(state));
-            updateUI();
-        }
-        
-        // Update UI
-        function updateUI() {
-            document.getElementById('balance').textContent = `$${state.balance.toFixed(2)}`;
-            document.getElementById('adCount').textContent = state.adCount;
-            document.getElementById('todayEarn').textContent = `$${state.todayEarn.toFixed(2)}`;
-        }
-        
-        // Show toast message
-        function showToast(message, isSuccess = true) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.style.background = isSuccess ? '#4CAF50' : '#f44336';
-            toast.classList.add('show');
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-        
-        // Show loading state only during ad display
-        function setAdLoading(isLoading) {
-            const btn = document.getElementById('showAdBtn');
-            const loading = document.getElementById('btnLoading');
-            const btnText = document.getElementById('btnText');
-            
-            if (isLoading) {
-                // Show loading only when ad is being shown
-                loading.classList.remove('hidden');
-                btnText.textContent = ' Showing Ad...';
-                btn.disabled = true;
-            } else {
-                // Hide loading when ad is done
-                loading.classList.add('hidden');
-                btnText.textContent = 'Watch Ad & Earn';
-                btn.disabled = false;
-            }
-        }
-        
-        // Check if can show ad (cooldown)
-        function canShowAd() {
-            if (!state.lastAdTime) return true;
-            
-            const now = Date.now();
-            const timeDiff = now - state.lastAdTime;
-            const cooldownMinutes = 1; // 1 minute cooldown
-            
-            return timeDiff > cooldownMinutes * 60 * 1000;
-        }
-        
-        // Get time until next ad in seconds
-        function getTimeUntilNextAd() {
-            if (!state.lastAdTime) return 0;
-            
-            const now = Date.now();
-            const timeDiff = now - state.lastAdTime;
-            const cooldownMs = 60 * 1000; // 1 minute
-            
-            if (timeDiff >= cooldownMs) return 0;
-            return Math.ceil((cooldownMs - timeDiff) / 1000);
-        }
-        
-        // Start cooldown timer
-        function startCooldownTimer() {
-            if (cooldownInterval) {
-                clearInterval(cooldownInterval);
-            }
-            
-            cooldownInterval = setInterval(() => {
-                const secondsLeft = getTimeUntilNextAd();
-                const cooldownMsg = document.getElementById('cooldownMessage');
-                const adBtn = document.getElementById('showAdBtn');
-                
-                if (secondsLeft > 0) {
-                    cooldownMsg.textContent = `Next ad available in ${secondsLeft}s`;
-                    adBtn.disabled = true;
-                    adBtn.style.opacity = '0.5';
-                } else {
-                    cooldownMsg.textContent = '';
-                    if (!adBtn.classList.contains('ad-loading')) {
-                        adBtn.disabled = false;
-                        adBtn.style.opacity = '1';
-                    }
-                }
-            }, 1000);
-        }
-        
-        // Show Monetag Ad
-        function showMonetagAd() {
-            return new Promise((resolve, reject) => {
-                try {
-                    console.log('Attempting to show Monetag ad...');
-                    
-                    // Try to find Monetag function
-                    if (typeof window.show_10613926 === 'function') {
-                        console.log('Monetag SDK found, showing ad...');
-                        
-                        // Show loading state only when ad starts
-                        setAdLoading(true);
-                        
-                        // Call Monetag ad with proper callbacks
-                        window.show_10613926({
-                            onDisplay: function() {
-                                console.log('Ad displayed successfully');
-                                // Keep loading state while ad is showing
-                            },
-                            onClose: function() {
-                                console.log('Ad closed by user');
-                                // Hide loading when ad closes
-                                setAdLoading(false);
-                                resolve(true);
-                            },
-                            onComplete: function() {
-                                console.log('Ad completed');
-                                // Ad completed successfully
-                            },
-                            onError: function(error) {
-                                console.error('Ad error:', error);
-                                setAdLoading(false);
-                                reject(error);
-                            }
-                        });
-                    } else {
-                        console.warn('Monetag SDK not ready, checking for alternative...');
-                        
-                        // Alternative: Try to find ad container method
-                        const adContainer = document.getElementById('monetag-ads');
-                        if (adContainer) {
-                            // Show loading
-                            setAdLoading(true);
-                            
-                            // Simulate ad for testing (remove in production)
-                            setTimeout(() => {
-                                console.log('Simulated ad completed');
-                                setAdLoading(false);
-                                resolve(true);
-                            }, 3000);
-                        } else {
-                            reject(new Error('Ad SDK not available'));
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error in showMonetagAd:', error);
-                    setAdLoading(false);
-                    reject(error);
-                }
-            });
-        }
-        
-        // Handle ad click
-        async function handleAdClick() {
-            // Check cooldown first
-            if (!canShowAd()) {
-                const secondsLeft = getTimeUntilNextAd();
-                showToast(`⏳ Please wait ${secondsLeft} seconds`, false);
-                return;
-            }
-            
-            try {
-                // Show ad - loading state is managed inside showMonetagAd function
-                const adShown = await showMonetagAd();
-                
-                if (adShown) {
-                    // Random earning between $0.05 and $0.20
-                    const earning = Math.random() * 0.15 + 0.05;
-                    
-                    // Update state
-                    state.balance += earning;
-                    state.adCount += 1;
-                    state.todayEarn += earning;
-                    state.lastAdTime = Date.now();
-                    
-                    // Save data
-                    saveData();
-                    
-                    // Show success message
-                    showToast(`🎉 Earned $${earning.toFixed(2)}!`);
-                    
-                    // Update cooldown timer
-                    startCooldownTimer();
-                    
-                    // Optional: Send data to Telegram
-                    if (tg) {
-                        tg.sendData(JSON.stringify({
-                            action: 'ad_watched',
-                            earning: earning.toFixed(2),
-                            totalBalance: state.balance.toFixed(2)
-                        }));
-                    }
-                }
-            } catch (error) {
-                console.error('Ad failed:', error);
-                showToast('❌ Failed to load ad. Try again!', false);
-                setAdLoading(false); // Ensure loading is hidden on error
-            }
-        }
-        
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            loadData();
-            
-            // Add click handler
-            document.getElementById('showAdBtn').addEventListener('click', handleAdClick);
-            
-            // Set today's date
-            localStorage.setItem('lastDate', new Date().toDateString());
-            
-            console.log('App initialized, Monetag zone: 10613926');
-        });
-        
-        // Clean up interval on page unload
-        window.addEventListener('beforeunload', () => {
-            if (cooldownInterval) {
-                clearInterval(cooldownInterval);
-            }
-        });
-    </script>
+    }).catch(() => {
+        alert("Ad not available. Try again.");
+    });
+}
+</script>
+
 </body>
 </html>
